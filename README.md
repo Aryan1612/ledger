@@ -2,7 +2,7 @@
 
 Ledger is a personal expense tracker. This repository contains the web deployment setup, utilizing **Supabase** for the backend database and authentication, and **Netlify** for hosting the static frontend. 
 
-*Note: If you have previously used the desktop version (SQLite + Python), this web version operates entirely independently. It uses a separate database and does not sync with the local desktop app.*
+*Note: A standalone native desktop version of this application is currently in development and will be released in the future.*
 
 Please follow the deployment instructions below in sequence to properly configure your instance.
 
@@ -67,7 +67,6 @@ To use Ledger on multiple devices, repeat this process to register a passkey for
 
 - **Sign Out**: A sign-out button is available in the header next to the month selector for shared devices.
 - **Passkey Beta**: The Supabase passkey feature is currently in beta. If the API changes or you encounter issues, you can always fall back to the email sign-in link used in Step 6.
-- **Data Migration**: If you are transitioning from the desktop version and wish to migrate your existing `expense_tracker.db` data to Supabase, you can use a migration script to securely transfer your records.
 
 ## Additional Integrations
 
