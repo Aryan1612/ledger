@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Ledger — Personal Expense Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css?v=2" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.2/dist/umd/supabase.min.js"></script>
+<script src="/static/js/supabase-config.js"></script>
+</head>
+<body>
+
+<!-- ===================== AUTH GATE ===================== -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="brand auth-brand">
+      <span class="brand-mark">§</span>
+      <div class="brand-text">
+        <h1>Ledger</h1>
+        <p>Your money, kept privately, in your own database</p>
+      </div>
+    </div>
+
+    <button type="button" id="passkeySigninBtn" class="auth-primary-btn">Sign in with passkey</button>
+
+    <p class="auth-status" id="authStatus" hidden></p>
+
+    <button type="button" id="firstTimeToggle" class="link-btn auth-link">First time on this device? Set up a passkey</button>
+
+    <form id="bootstrapForm" class="bootstrap-form" hidden>
+      <label for="bootstrapEmail">Account email</label>
+      <input type="email" id="bootstrapEmail" placeholder="you@example.com" required />
+      <button type="submit" class="auth-secondary-btn">Email a one-time sign-in link</button>
+      <p class="auth-hint">Open the link on this device — you'll then be asked to register this device's passkey.</p>
+    </form>
+
+    <div class="register-passkey-block" id="registerPasskeyBlock" hidden>
+      <p>Signed in. Register this device so you can use passkey sign-in from now on.</p>
+      <button type="button" id="registerPasskeyBtn" class="auth-primary-btn">Register passkey on this device</button>
+      <button type="button" id="skipRegisterBtn" class="link-btn auth-link">Continue without registering</button>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">§</span>
+      <div class="brand-text">
+        <h1>Ledger</h1>
+        <p>Your money, kept private, in your own Supabase project</p>
+      </div>
+    </div>
+    <div class="month-control">
+      <button id="prevMonth" class="month-arrow" aria-label="Previous month">‹</button>
+      <select id="monthSelect" aria-label="Select month"></select>
+      <button id="nextMonth" class="month-arrow" aria-label="Next month">›</button>
+      <button id="signOutBtn" class="link-btn signout-btn" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <!-- ===================== LEDGER SUMMARY STRIP ===================== -->
+  <section class="summary-strip" aria-label="Monthly summary">
+    <div class="summary-line">
+      <span class="summary-label">Income</span>
+      <span class="summary-amount income" id="totalIncome">₹0</span>
+    </div>
+    <div class="summary-rule"></div>
+    <div class="summary-line">
+      <span class="summary-label">Spent</span>
+      <span class="summary-amount expense" id="totalExpense">₹0</span>
+    </div>
+    <div class="summary-rule"></div>
+    <div class="summary-line net-line">
+      <span class="summary-label">Net</span>
+      <span class="summary-amount" id="totalNet">₹0</span>
+    </div>
+  </section>
+
+  <!-- ===================== MAIN GRID ===================== -->
+  <main class="main-grid">
+
+    <!-- LEFT: Breakdown -->
+    <section class="panel chart-panel">
+      <div class="panel-header">
+        <h2>Where it went</h2>
+        <div class="panel-header-right">
+          <span class="panel-sub" id="chartMonthLabel"></span>
+          <button type="button" id="openCompareBtn" class="panel-action-btn">Compare ↗</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="categoryChart" width="280" height="280"></canvas>
+        <div class="chart-center" id="chartCenter">
+          <span class="chart-center-amount" id="chartCenterAmount">₹0</span>
+          <span class="chart-center-label" id="chartCenterLabel">total spent</span>
+        </div>
+      </div>
+      <ul class="legend" id="categoryLegend"></ul>
+
+      <div class="trend-block">
+        <h3>Last few months</h3>
+        <div class="trend-bars" id="trendBars"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Transactions -->
+    <section class="panel ledger-panel">
+      <div class="panel-header">
+        <h2>Entries</h2>
+        <div class="panel-header-right">
+          <span class="panel-sub" id="entryCount"></span>
+          <button type="button" id="openSheetBtn" class="panel-action-btn">Full sheet ↗</button>
+        </div>
+      </div>
+
+      <div class="ledger-table-wrap">
+        <table class="ledger-table" id="ledgerTable">
+          <thead>
+            <tr>
+              <th class="col-date">Date &amp; time</th>
+              <th class="col-cat">Category</th>
+              <th class="col-note">Note</th>
+              <th class="col-amount">Amount</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody">
+            <!-- rows injected by JS -->
+          </tbody>
+        </table>
+        <div class="empty-state" id="emptyState" hidden>
+          <p>No entries yet for this month.</p>
+          <p class="empty-sub">Log your first transaction below — it's saved to your local database the moment you add it.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== QUICK ADD BAR ===================== -->
+  <footer class="add-bar">
+    <form id="addForm" class="add-form">
+      <div class="type-toggle" role="radiogroup" aria-label="Transaction type">
+        <button type="button" class="type-btn active" data-type="expense">Expense</button>
+        <button type="button" class="type-btn" data-type="income">Income</button>
+      </div>
+
+      <input type="hidden" id="txType" value="expense" />
+
+      <div class="field amount-field">
+        <label for="amountInput">Amount</label>
+        <div class="amount-input-wrap">
+          <span class="currency-sign">₹</span>
+          <input type="number" id="amountInput" step="0.01" min="0.01" placeholder="0.00" required />
+        </div>
+      </div>
+
+      <div class="field category-field" id="categoryFieldWrap">
+        <label for="categorySelect">Category</label>
+        <select id="categorySelect" required></select>
+      </div>
+
+      <div class="field datetime-field">
+        <label for="datetimeInput">When</label>
+        <input type="datetime-local" id="datetimeInput" required />
+      </div>
+
+      <div class="field note-field">
+        <label for="noteInput">Note</label>
+        <input type="text" id="noteInput" placeholder="e.g. Lunch with Raj, swiggy" maxlength="200" />
+      </div>
+
+      <button type="submit" class="add-btn">Add entry</button>
+    </form>
+
+    <div class="manage-categories">
+      <button type="button" id="manageCategoriesBtn" class="link-btn">Manage categories</button>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ===================== CATEGORY MANAGER MODAL ===================== -->
+<div class="modal-overlay" id="categoryModalOverlay" hidden>
+  <div class="modal" role="dialog" aria-labelledby="categoryModalTitle">
+    <div class="modal-header">
+      <h2 id="categoryModalTitle">Categories</h2>
+      <button class="modal-close" id="closeCategoryModal" aria-label="Close">×</button>
+    </div>
+
+    <ul class="category-manage-list" id="categoryManageList"></ul>
+
+    <form id="newCategoryForm" class="new-category-form">
+      <input type="text" id="newCategoryName" placeholder="New category name" maxlength="40" required />
+      <input type="color" id="newCategoryColor" value="#1f6f5c" aria-label="Category color" />
+      <button type="submit">Add</button>
+    </form>
+  </div>
+</div>
+
+<!-- Toast for confirmations -->
+<div class="toast" id="toast" hidden></div>
+
+
+<!-- ===================== TRANSACTION SHEET MODAL ===================== -->
+<div class="modal-overlay modal-fullscreen" id="sheetModalOverlay" hidden>
+  <div class="modal modal-xl" role="dialog" aria-labelledby="sheetModalTitle">
+    <div class="modal-header">
+      <h2 id="sheetModalTitle">Transaction Sheet</h2>
+      <div class="sheet-controls">
+        <div class="sheet-filters">
+          <select id="sheetTypeFilter" class="sheet-filter-select">
+            <option value="all">All types</option>
+            <option value="expense">Expenses only</option>
+            <option value="income">Income only</option>
+          </select>
+          <select id="sheetCatFilter" class="sheet-filter-select">
+            <option value="all">All categories</option>
+          </select>
+          <select id="sheetSortSelect" class="sheet-filter-select">
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="amount-desc">Highest amount</option>
+            <option value="amount-asc">Lowest amount</option>
+          </select>
+        </div>
+        <button type="button" id="exportCsvBtn" class="sheet-export-btn">Export CSV</button>
+        <button class="modal-close" id="closeSheetModal" aria-label="Close">×</button>
+      </div>
+    </div>
+    <div class="sheet-summary-bar" id="sheetSummaryBar"></div>
+    <div class="sheet-table-wrap">
+      <table class="sheet-table" id="sheetTable">
+        <thead>
+          <tr>
+            <th data-sort="date" class="sortable">Date &amp; time <span class="sort-arrow">↕</span></th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th data-sort="amount" class="sortable col-amount">Amount <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="sheetBody"></tbody>
+      </table>
+      <div class="empty-state" id="sheetEmpty" hidden>
+        <p>No transactions match the current filters.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== COMPARISON CHART MODAL ===================== -->
+<div class="modal-overlay modal-fullscreen" id="compareModalOverlay" hidden>
+  <div class="modal modal-xl" role="dialog" aria-labelledby="compareModalTitle">
+    <div class="modal-header">
+      <h2 id="compareModalTitle">Monthly Comparison</h2>
+      <div class="sheet-controls">
+        <button class="modal-close" id="closeCompareModal" aria-label="Close">×</button>
+      </div>
+    </div>
+    <div class="compare-toolbar">
+      <div class="compare-period-btns" role="group" aria-label="Period">
+        <button class="period-btn active" data-months="1">1 mo</button>
+        <button class="period-btn" data-months="3">3 mo</button>
+        <button class="period-btn" data-months="6">6 mo</button>
+        <button class="period-btn" data-months="12">12 mo</button>
+      </div>
+      <div class="compare-cat-filters" id="compareCatFilters">
+        <!-- category toggle chips injected by JS -->
+      </div>
+    </div>
+    <div class="compare-chart-area">
+      <canvas id="compareChart"></canvas>
+    </div>
+    <div class="compare-table-wrap" id="compareTableWrap"></div>
+  </div>
+</div>
+
+<script src="/static/js/app.js?v=2"></script>
+</body>
+</html>

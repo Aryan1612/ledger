@@ -1,0 +1,26 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# The HTML shell must always be revalidated — it's what points the browser
+# at a (possibly new) version of the CSS/JS. If this itself gets cached,
+# redeploys silently don't show up until the cache expires, which is what
+# was forcing incognito/private tabs as a workaround.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"
