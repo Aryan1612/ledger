@@ -4,9 +4,18 @@ This guide explains how to create a custom iOS Shortcut to quickly log expenses 
 
 *Prerequisites: You must have completed the setup in `README-email.md` and have your `LEDGER_SECRET_CODE` ready.*
 
-## Constructing the Shortcut
+## Quick Install (Recommended)
 
-Open the **Shortcuts** app on your iOS device and tap **+** in the top right corner to create a new shortcut. Follow these steps to build the action sequence.
+You can download the pre-configured shortcut directly to your iPhone:
+**[Download Ledger Logger Shortcut](https://www.icloud.com/shortcuts/839b8422e12f49b298eca6677e04b730)**
+
+Once downloaded, open it in the Shortcuts app and update the "To" field in the Send Email action to your dummy Apps Script email.
+
+---
+
+## Manual Construction
+
+If you prefer to build it from scratch, open the **Shortcuts** app on your iOS device and tap **+** in the top right corner. Follow these steps:
 
 ### 1. Initial Prompt (Expense or Income)
 
