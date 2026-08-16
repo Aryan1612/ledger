@@ -1,119 +1,90 @@
-# Ledger — the "Log Expense" iOS Shortcut
+# Ledger — iOS Shortcut Integration
 
-A tap-through form on your Home Screen (or "Hey Siri, log expense") that
-builds the right email format and sends it — no typing subject lines, no
-remembering the exact syntax.
+This guide explains how to create a custom iOS Shortcut to quickly log expenses or income via email. It provides an intuitive, tap-through interface directly from your Home Screen (or via Siri) that automatically formats and dispatches the email without requiring manual typing.
 
-Assumes you've already set up `apps-script/Code.gs` (see `README-email.md`)
-and know your secret code from `LEDGER_SECRET_CODE`.
+*Prerequisites: You must have completed the setup in `README-email.md` and have your `LEDGER_SECRET_CODE` ready.*
 
-## Build it
+## Constructing the Shortcut
 
-Open the **Shortcuts** app → tap **+** (top right) → build these actions in
-order. After adding each action, tap it to rename/configure as described.
+Open the **Shortcuts** app on your iOS device and tap **+** in the top right corner to create a new shortcut. Follow these steps to build the action sequence.
 
-### 1. Ask expense or income
+### 1. Initial Prompt (Expense or Income)
 
-Add action **Choose from Menu**.
-- Tap the menu prompt text, set it to `Expense or income?`
-- It starts with two menu items ("Menu Item 1/2") — tap each to rename:
-  `Expense` and `Income`.
-- This creates two branches below it — build the rest inside the
-  **Expense** branch first, then the **Income** branch.
+1. Add the **Choose from Menu** action.
+2. Set the prompt text to: `Expense or income?`
+3. Rename the two default menu items to `Expense` and `Income`.
+4. This will create two distinct branches in your workflow.
 
-### 2. Inside the "Expense" branch
+### 2. Configure the "Expense" Branch
 
-**Add action: Ask for Input**
-- Input Type: **Number**
-- Prompt: `Amount (₹)`
-- Rename the output variable (tap the little variable chip) to `Amount`
+Add the following actions directly under the "Expense" menu branch:
 
-**Add action: Choose from Menu** (a second one, nested here)
-- Prompt: `Category`
-- Add one menu item per category you actually use — match your app's
-  category names exactly, e.g.: `Travel`, `Shopping`, `Personal Care`,
-  `Transportation`, `Entertainment`, `Housing`, `Food`. Delete the two
-  default placeholder items first.
-- In **each** menu item's branch, add a single **Text** action containing
-  just that category's name (this is what lets one "Category" variable
-  carry through — see step below). Actually simpler: skip the Text action
-  and instead, after this whole Choose-from-Menu block ends, Shortcuts
-  automatically gives you a **"Chosen Item"** variable you can use directly
-  in step 4 — no need to repeat text in every branch.
+1. **Ask for Input**:
+   - Type: **Number**
+   - Prompt: `Amount (₹)`
+   - Rename the output variable to `Amount`.
+2. **Choose from Menu**:
+   - Prompt: `Category`
+   - Add a menu item for each category in your Supabase database (e.g., `Travel`, `Food`, `Housing`). Ensure these names match the starting characters of your actual categories.
+   - Delete the default placeholder items. Leave the inner branches empty; Shortcuts automatically saves the selection to a **Chosen Item** variable.
+3. **Ask for Input**:
+   - Type: **Text**
+   - Prompt: `Note (optional)`
+   - Rename the output variable to `Note`.
+4. **Text**:
+   - Construct the email payload exactly as follows (replace `[SECRET_CODE]` with your actual `LEDGER_SECRET_CODE`):
+     ```
+     [SECRET_CODE] [Amount] [Chosen Item] [Note]
+     ```
+   - *Note: Do not type the brackets; insert the actual dynamic variable pills provided by the Shortcuts app.*
+   - Rename the output variable of this text block to `EmailBody`.
 
-**Add action: Ask for Input**
-- Input Type: **Text**
-- Prompt: `Note (optional)`
-- Rename output variable to `Note`
+### 3. Configure the "Income" Branch
 
-**Add action: Text**
-- Content:
-  ```
-  LEDGER8f3k2 [Amount] [Chosen Item] [Note]
-  ```
-  (Tap inside the text field, then tap the variable chips for `Amount`,
-  the category menu's `Chosen Item`, and `Note` from the little variables
-  bar above the keyboard — don't type the brackets, insert the actual blue
-  variable pills. Replace `LEDGER8f3k2` with your real secret code.)
-- Rename this Text action's output to `EmailBody`
+Add the following actions directly under the "Income" menu branch:
 
-### 3. Inside the "Income" branch
+1. **Ask for Input**:
+   - Type: **Number**
+   - Prompt: `Amount (₹)`
+   - Rename the output variable to `Amount`.
+2. **Ask for Input**:
+   - Type: **Text**
+   - Prompt: `Note (optional)`
+   - Rename the output variable to `Note`.
+3. **Text**:
+   - Construct the email payload exactly as follows:
+     ```
+     [SECRET_CODE] in [Amount] [Note]
+     ```
+   - Rename the output variable to `EmailBody`.
 
-**Add action: Ask for Input**
-- Input Type: **Number**, Prompt: `Amount (₹)`, rename output to `Amount`
+### 4. Configure the Email Dispatch
 
-**Add action: Ask for Input**
-- Input Type: **Text**, Prompt: `Note (optional)`, rename output to `Note`
+Add this action at the very bottom, outside of the menu branches:
 
-**Add action: Text**
-- Content:
-  ```
-  LEDGER8f3k2 in [Amount] [Note]
-  ```
-- Rename output to `EmailBody`
+1. **Send Email**:
+   - **To:** Your registered Gmail address.
+   - **Subject:** `ledger`
+   - **Body:** Insert the `EmailBody` variable pill.
+   - Tap **Show More** and toggle **Show Compose Sheet** to **Off**. This ensures the email sends silently in the background.
 
-### 4. After both branches (outside the Choose from Menu block)
+### 5. Finalize and Save
 
-**Add action: Send Email**
-- **To:** your own email address
-- **Subject:** `ledger`
-- **Body:** tap in, insert the `EmailBody` variable pill
-- Tap **Show More** → turn **Show Compose Sheet** **off**, so it sends
-  silently in the background instead of opening Mail for you to hit send.
+1. Tap the shortcut's title at the top of the screen and rename it to `Log Expense`.
+2. Tap the settings icon (the circular steering wheel icon) and select **Add to Home Screen**.
+3. Optionally, enable **Use with Siri** to trigger the workflow vocally.
 
-### 5. Name and save
+## Usage Guide
 
-- Tap the shortcut's name at the top → `Log Expense`.
-- Tap the settings icon (bottom left, looks like a steering wheel/circle)
-  → **Add to Home Screen**, so it's a one-tap icon.
-- While there, you can also enable **Use with Siri** and record a phrase
-  like "Log expense."
+Tap the icon on your Home Screen (or say "Hey Siri, log expense") to execute the workflow:
+1. Select **Expense** or **Income**.
+2. Enter the numerical amount.
+3. (For expenses) Select the appropriate category from the menu.
+4. Provide an optional note.
 
-## Using it
+The workflow will silently dispatch the formatted email, and you will receive a confirmation reply from your Apps Script integration shortly after.
 
-Tap the Home Screen icon (or say the Siri phrase) →
+## Synchronization and Maintenance
 
-1. Tap **Expense** or **Income**
-2. Type the amount, tap **Done**
-3. (Expense only) tap a category from the list
-4. Type a note or leave blank, tap **Done**
-
-That's it — the email sends itself, and within about a minute you'll get
-the ✅ confirmation and the entry is live in the app.
-
-## Keeping categories in sync
-
-If you add or rename a category in the app later, edit the Shortcut's
-category menu step to match (step 2's inner Choose from Menu) — the names
-need to at least *start with* what's in Supabase for the matching in
-`Code.gs` to find it (it does prefix/substring matching, so `Trans` would
-still match `Transportation`, but it's safer to just keep them identical).
-
-## First-run permissions
-
-The first time you run it, iOS will ask permission to send email as you and
-possibly to allow the shortcut to run — allow both. If you don't use
-Gmail's iOS app as your default Mail account, make sure whichever Mail
-account Shortcuts sends from is the same one that lands in the Gmail inbox
-`Code.gs` is watching (i.e. actually delivers to your Gmail address, even
-if sent via Apple Mail).
+- **Categories:** If you modify your categories within the web app, remember to update the internal menu list in this iOS Shortcut. The names must match (or prefix-match) the records in your Supabase database.
+- **Permissions:** Upon the first execution, iOS will request permission to send emails automatically. Approve this request to enable silent dispatching.

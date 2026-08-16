@@ -1,110 +1,75 @@
-# Ledger — log expenses by email
+# Ledger — Email Logging Integration
 
-Simpler alternative to the WhatsApp route: no Meta Business account, no app
-review, no third-party service. It runs entirely inside your own Gmail
-account using Google Apps Script (free, built into every Google account).
+This module provides a serverless integration to log expenses directly via email, bypassing the need for a Meta Business account or third-party webhooks. It runs securely within your own Google account using Google Apps Script.
 
-## How it works
+## Overview
 
-You send an email to **yourself** with a fixed format in the body. A script
-checks your Gmail every minute, and if it finds a new matching email, parses
-it, inserts the transaction into Supabase, replies with a confirmation, and
-archives the original so your inbox stays clean.
+By sending an email with a specific format to **your own Gmail address**, a background Apps Script will parse the content, insert the transaction into your Supabase database, reply with a confirmation, and automatically archive the original email to keep your inbox organized.
 
-## Message format
+## Message Format
 
-Put this in the **email body** (subject just needs to contain the word
-"ledger" somewhere — subject text itself doesn't matter beyond that):
+Include your transaction details in the **email body**. (The subject line must contain the word "ledger", but otherwise can be anything).
 
+**Examples:**
 ```
-LEDGER8f3k2 250 food lunch with Raj      → expense: ₹250, category "Food"
-LEDGER8f3k2 in 5000 salary                → income: ₹5000
+[SECRET_CODE] 250 food lunch with Raj      → logs an expense: ₹250, category "Food", note "lunch with Raj"
+[SECRET_CODE] in 5000 salary                → logs an income: ₹5000, note "salary"
 ```
 
-`LEDGER8f3k2` is a secret code you invent yourself (step 3 below) — it's
-what stops a spoofed or misdirected email from creating fake entries, since
-whoever sends it needs to know the code, not just your email address.
+*Note: Replace `[SECRET_CODE]` with the unique identifier you configure in Step 3. This acts as a security measure to prevent unauthorized entries.*
 
-## 1. Create the Apps Script project
+## 1. Initialize the Apps Script Project
 
-1. Go to [script.google.com](https://script.google.com) → **New project**.
-2. Delete the placeholder code, paste in the contents of `apps-script/Code.gs`.
-3. Rename the project (top left) to something like "Ledger Email Logger".
+1. Navigate to [script.google.com](https://script.google.com) and click **New project**.
+2. Delete the default placeholder code and paste the contents of `apps-script/Code.gs`.
+3. Rename the project to a descriptive title, such as "Ledger Email Logger".
 
-## 2. Find your Supabase user ID and service role key
+## 2. Retrieve Supabase Credentials
 
-(Same as the WhatsApp setup, if you already did that — skip to step 3.)
+If you haven't already obtained these during the WhatsApp setup:
+- **User ID:** Navigate to **Supabase Dashboard → Authentication → Users**, click your user profile, and copy the **UID**.
+- **Service Role Key:** Navigate to **Supabase Dashboard → Project Settings → API Keys** and copy the **service_role** key. *(This key bypasses Row Level Security and is kept strictly private within your Apps Script environment).*
 
-- **Supabase dashboard → Authentication → Users** → click your user → copy
-  the **UID**.
-- **Supabase dashboard → Project Settings → API Keys** → copy the
-  **service_role** key (not anon). This bypasses Row Level Security — it
-  only goes into Apps Script's private storage in the next step, never into
-  any file that reaches a browser.
+## 3. Configure Script Properties
 
-## 3. Set Script Properties
-
-In the Apps Script editor: **Project Settings** (gear icon, left sidebar) →
-scroll to **Script Properties** → **Add script property**, one at a time:
+In the Apps Script editor:
+1. Click the **Project Settings** (gear icon) in the left sidebar.
+2. Scroll down to **Script Properties** and click **Add script property** for each of the following:
 
 | Property | Value |
 |---|---|
-| `SUPABASE_URL` | same URL as in `supabase-config.js` |
-| `SUPABASE_SERVICE_ROLE_KEY` | from step 2 |
-| `LEDGER_USER_ID` | from step 2 |
-| `LEDGER_SECRET_CODE` | make up your own, e.g. `LEDGER8f3k2` |
-| `ALLOWED_EMAIL` | your own email address, lowercase |
+| `SUPABASE_URL` | Your Supabase project URL (matches `supabase-config.js`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your service_role key from Step 2 |
+| `LEDGER_USER_ID` | Your UID from Step 2 |
+| `LEDGER_SECRET_CODE` | A unique string you create (e.g., `LEDGER8f3k2`) |
+| `ALLOWED_EMAIL` | Your Gmail address, in lowercase |
 
-## 4. Run setup once
+## 4. Run Initial Setup
 
-Back in the **Editor** tab: in the function dropdown at the top (next to the
-Run button), select **setup**, then click **Run**.
+1. Return to the **Editor** tab.
+2. In the function dropdown menu at the top, select **setup**, then click **Run**.
+3. During the first run, Google will prompt for authorization. Because this is your personal script, it will be flagged as "unverified." Click **Advanced → Go to Ledger Email Logger (unsafe)** → **Allow**. This grants the script permission to interact with your Gmail account locally.
+4. The setup function will automatically configure a 1-minute time-driven trigger and create two organizational labels in your Gmail (`Ledger/Processed` and `Ledger/Failed`).
 
-- The first run will pop up an authorization screen — Google flags this as
-  "unverified" because it's your own personal script, not a published app.
-  Click **Advanced → Go to Ledger Email Logger (unsafe)** → **Allow**. This
-  is safe; it's granting *your own script* permission to read/send from
-  *your own* Gmail, nothing leaves Google's infrastructure.
-- This creates the every-1-minute trigger and two Gmail labels
-  (`Ledger/Processed`, `Ledger/Failed`) that keep things organized.
+## 5. Verification and Testing
 
-## 5. Test it
-
-From your phone, send a new email **to yourself**:
-
+Send a test email to your own address from your phone or mail client:
 - **Subject:** `ledger`
-- **Body:** `LEDGER8f3k2 250 food lunch with Raj` (use your real secret code)
+- **Body:** `[YOUR_SECRET_CODE] 250 food test entry` 
 
-Within about a minute you should get a ✅ confirmation reply, and the entry
-will show up in the app under the current month. The original email moves
-out of your inbox into the `Ledger/Processed` label.
+Within approximately one minute, you should receive a ✅ confirmation reply. The transaction will appear in your web application, and the original email will be moved to the `Ledger/Processed` label.
 
-## Notes / limits
+## Additional Notes
+- **Processing Delay:** Google Apps Script triggers have a minimum interval of 1 minute, so expect a brief delay.
+- **Security:** Emails lacking the correct secret code are silently ignored without generating a reply.
+- **Error Handling:** If the format or category is unrecognized, you will receive an explanatory email reply.
+- **Updating the Code:** You can change your `LEDGER_SECRET_CODE` at any time via the Script Properties without needing to redeploy.
+- **Compatibility:** This email integration operates independently and can run concurrently with the WhatsApp integration.
 
-- **Delay:** up to ~1 minute, since it's polling rather than instant — Apps
-  Script's minimum trigger interval. For a personal ledger this is
-  unnoticeable in practice.
-- **Wrong secret code:** silently ignored (no reply), so a stray email that
-  happens to have "ledger" in the subject doesn't get a confusing response.
-- **Wrong format / unknown category:** you get an email back explaining
-  what went wrong, same as the WhatsApp version.
-- If you ever want to change the secret code, just update the
-  `LEDGER_SECRET_CODE` script property — no redeploy needed.
-- You can run this **alongside** the WhatsApp bot if you ever set both up —
-  they don't conflict, since they're independent paths into the same
-  Supabase database.
+## Optional Automation: iOS Shortcut
 
-## Optional: make sending the email effortless
-
-Typing out an email on your phone every time is still a few taps. An iOS
-Shortcut can shave that down to one tap + a text prompt:
-
-1. **Shortcuts app → +** → add action **Send Email**.
-2. **To:** your own address. **Subject:** `ledger`.
-3. **Body:** add a **Text** action first with an **Ask for Input** step
-   (Text type) — plug that into the email body.
-4. Add the shortcut to your Home Screen (Share icon → **Add to Home
-   Screen**), or trigger it by voice: "Hey Siri, log expense."
-
-Then logging an expense is: tap the icon → type `LEDGER8f3k2 250 food lunch
-with Raj` → send. No app switching, no typing a subject line each time.
+If you use an iPhone, you can streamline the process using the Shortcuts app:
+1. Open **Shortcuts** and create a new shortcut with the **Send Email** action.
+2. Configure the recipient to your own address and the subject to `ledger`.
+3. Precede the email action with an **Ask for Input** action (Text type) and pass that input into the email body.
+4. Add the shortcut to your Home Screen or trigger it via Siri ("Hey Siri, log expense").
