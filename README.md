@@ -71,6 +71,6 @@ To use Ledger on multiple devices, repeat this process to register a passkey for
 ## Additional Integrations
 
 Beyond the standard web interface, you can also set up alternative ways to log your expenses on the go:
+- [Log expenses via an iOS Shortcut](README-shortcut.md)
 - [Log expenses via WhatsApp](README-whatsapp.md)
 - [Log expenses via Email](README-email.md)
-- [Log expenses via an iOS Shortcut](README-shortcut.md)
