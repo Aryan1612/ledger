@@ -1,66 +1,70 @@
-# Ledger — web version (Supabase + Netlify)
+# Ledger — Web Version (Supabase + Netlify)
 
-This is the same app, restructured so Supabase replaces `app.py` + the SQLite
-file, and Netlify hosts the static frontend. **It's a separate deployment
-from the desktop app** — separate database, separate data. The desktop
-`.app` / `python3 app.py` setup still works exactly as before if you want to
-keep using it too; the two just don't sync with each other.
+Ledger is a personal expense tracker. This repository contains the web deployment setup, utilizing **Supabase** for the backend database and authentication, and **Netlify** for hosting the static frontend. 
 
-Order matters below — do these roughly in sequence.
+*Note: If you have previously used the desktop version (SQLite + Python), this web version operates entirely independently. It uses a separate database and does not sync with the local desktop app.*
 
-## 1. Set up the database (Supabase)
+Please follow the deployment instructions below in sequence to properly configure your instance.
 
-You already have a project. Open **SQL Editor** in the Supabase dashboard and run, in order:
+## 1. Database Setup (Supabase)
 
-1. `supabase/schema.sql` — creates the `categories` / `transactions` tables and locks every row to your user ID (Row Level Security).
-2. `supabase/functions.sql` — adds two functions the frontend calls for the monthly summary and comparison charts.
-3. `supabase/grants.sql` — grants the `authenticated` role Data API access to those tables and functions. Supabase changed its defaults on **May 30, 2026**: new projects no longer auto-expose tables/functions to the Data API, even with RLS already set up — a role needs an explicit grant just to reach the table at all. If your project predates that change this is a harmless no-op; if it doesn't, this step is what makes the app's queries actually reach the database instead of failing with a `permission denied for table` (`42501`) error.
+1. Create a new project in your [Supabase Dashboard](https://supabase.com/dashboard).
+2. Navigate to the **SQL Editor** and run the following scripts in order:
+   - `supabase/schema.sql` — Initializes the `categories` and `transactions` tables and configures Row Level Security (RLS) to restrict data access to your user ID.
+   - `supabase/functions.sql` — Creates the necessary backend functions for generating monthly summaries and comparison charts.
+   - `supabase/grants.sql` — Grants the `authenticated` role required Data API access to the tables and functions. *(Note: This step is mandatory for Supabase projects created after May 30, 2026, due to changes in default API exposure settings).*
 
-## 2. Create your one account
+## 2. Account Creation
 
-Since sign-ups will be switched off, create the account by hand:
+To keep your ledger completely private, sign-ups should be disabled. You will manually create your single authorized account:
 
-- **Authentication → Users → Add user** in the dashboard. Enter your email, tick **Auto Confirm User**, and either set a password or leave it blank (you'll sign in via email link the first time anyway).
-- **Authentication → Sign In / Providers → Email**: turn **off** "Allow new users to sign up." From now on, that's the only account that will ever be able to exist.
+1. In the Supabase Dashboard, go to **Authentication → Users → Add user**. 
+2. Enter your email address, enable **Auto Confirm User**, and set a password (or leave it blank, as you will use an email magic link for your initial sign-in).
+3. Go to **Authentication → Sign In / Providers → Email** and **disable** the "Allow new users to sign up" setting.
 
-## 3. Fill in your project credentials
+## 3. Configure Project Credentials
 
-Open `static/js/supabase-config.js` and replace the two placeholder values with **Project Settings → Data API → URL** and **Project Settings → API Keys → anon / publishable key** (not the secret key — the anon key is meant to be public; Row Level Security is what actually protects your data).
+Connect your frontend to your Supabase project:
 
-## 4. Deploy to Netlify
+1. Open `static/js/supabase-config.js` in your text editor.
+2. Replace the placeholder values with your project credentials:
+   - `LEDGER_SUPABASE_URL`: Found under **Project Settings → Data API → URL**.
+   - `LEDGER_SUPABASE_ANON_KEY`: Found under **Project Settings → API Keys → anon / publishable key**. *(Note: This key is safe to be exposed in the frontend. Your data is protected by the Row Level Security configured in Step 1).*
 
-Since there's no build step, the simplest path:
+## 4. Frontend Deployment (Netlify)
 
-1. Create a free account at [netlify.com](https://www.netlify.com).
-2. Go to **Sites → Add new site → Deploy manually**, and drag the whole `ledger-web` folder onto the drop zone.
-3. Netlify gives you a URL like `https://random-name-123.netlify.app`. You can rename it under **Site settings → Change site name**, or attach a custom domain later.
+Since this is a static frontend without a build step, deployment is straightforward:
 
-(Once you're comfortable with the flow, pushing this folder to a GitHub repo and connecting it under **Add new site → Import from Git** gets you auto-deploys on every push — worth doing once you're past initial setup.)
+1. Create a free account at [Netlify](https://www.netlify.com).
+2. To deploy automatically, connect your GitHub repository to Netlify via **Add new site → Import from Git**.
+3. Alternatively, for a manual deployment, go to **Sites → Add new site → Deploy manually** and drag the entire project folder into the upload zone.
+4. Once deployed, Netlify will provide a URL (e.g., `https://your-ledger-site.netlify.app`). You can customize this domain in the **Site settings**.
 
-## 5. Enable passkeys, pointed at your real domain
+## 5. Enable Passkey Authentication
 
-Passkeys are bound to the exact domain they're registered on, and changing it later invalidates them — so do this **after** step 4, once you know your Netlify URL:
+Passkeys allow you to sign in securely without a password using biometrics. Passkeys are bound to your specific domain, so complete this step **after** securing your Netlify URL:
 
-- **Authentication → Passkeys** in the Supabase dashboard.
-- Turn on **Enable Passkey authentication**.
-- **Relying Party ID**: your bare domain, e.g. `random-name-123.netlify.app` (no `https://`, no path).
-- **Relying Party Origins**: `https://random-name-123.netlify.app`.
+1. In the Supabase Dashboard, navigate to **Authentication → Passkeys**.
+2. Toggle on **Enable Passkey authentication**.
+3. Set the **Relying Party ID** to your bare domain (e.g., `your-ledger-site.netlify.app` — no `https://` or trailing paths).
+4. Set the **Relying Party Origins** to your full URL (e.g., `https://your-ledger-site.netlify.app`).
 
-If you later move to a custom domain, you'll need to update these and re-register your passkey.
+*Note: If you later configure a custom domain, you will need to update these settings and re-register your passkeys.*
 
-## 6. First sign-in (one-time)
+## 6. Initial Sign-in and Device Registration
 
-Open your Netlify URL:
+To access your deployed app for the first time:
 
-1. Click **"First time on this device? Set up a passkey"**, enter your email, and send yourself the link.
-2. Open that email **on the same device** you want the passkey tied to, and click the link.
-3. You'll land back on the site already signed in, with a prompt to **register this device's passkey** — click it and follow your browser/OS prompt (Face ID, Touch ID, Windows Hello, or a security key).
-4. From then on, **"Sign in with passkey"** is all you need — no email, no password.
+1. Navigate to your Netlify URL.
+2. Click **"First time on this device? Set up a passkey"**, enter your email, and request a sign-in link.
+3. Open the email **on the device** you wish to register and click the link.
+4. You will be authenticated and prompted to **register this device's passkey**. Follow your operating system's prompt (e.g., Face ID, Touch ID, or Windows Hello).
+5. For all future visits on this device, you can simply click **"Sign in with passkey"**.
 
-If you use the app on more than one device (phone + laptop, say), repeat the email-link step once per device to register a passkey for each.
+To use Ledger on multiple devices, repeat this process to register a passkey for each device.
 
-## Notes
+## Additional Notes
 
-- **Sign out** button sits next to the month picker in the header, if you're ever on a shared machine.
-- The passkey feature is explicitly marked **beta** by Supabase — the API "may change without notice." If something breaks after a Supabase update, the email-link path in step 6 still works as a fallback sign-in.
-- If you ever want your existing desktop data (`expense_tracker.db`) copied into Supabase instead of starting fresh, that's a straightforward one-off migration script — just ask.
+- **Sign Out**: A sign-out button is available in the header next to the month selector for shared devices.
+- **Passkey Beta**: The Supabase passkey feature is currently in beta. If the API changes or you encounter issues, you can always fall back to the email sign-in link used in Step 6.
+- **Data Migration**: If you are transitioning from the desktop version and wish to migrate your existing `expense_tracker.db` data to Supabase, you can use a migration script to securely transfer your records.
