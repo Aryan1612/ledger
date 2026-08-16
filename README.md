@@ -68,3 +68,10 @@ To use Ledger on multiple devices, repeat this process to register a passkey for
 - **Sign Out**: A sign-out button is available in the header next to the month selector for shared devices.
 - **Passkey Beta**: The Supabase passkey feature is currently in beta. If the API changes or you encounter issues, you can always fall back to the email sign-in link used in Step 6.
 - **Data Migration**: If you are transitioning from the desktop version and wish to migrate your existing `expense_tracker.db` data to Supabase, you can use a migration script to securely transfer your records.
+
+## Additional Integrations
+
+Beyond the standard web interface, you can also set up alternative ways to log your expenses on the go:
+- [Log expenses via WhatsApp](README-whatsapp.md)
+- [Log expenses via Email](README-email.md)
+- [Log expenses via an iOS Shortcut](README-shortcut.md)

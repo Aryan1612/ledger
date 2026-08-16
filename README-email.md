@@ -73,3 +73,5 @@ If you use an iPhone, you can streamline the process using the Shortcuts app:
 2. Configure the recipient to your own address and the subject to `ledger`.
 3. Precede the email action with an **Ask for Input** action (Text type) and pass that input into the email body.
 4. Add the shortcut to your Home Screen or trigger it via Siri ("Hey Siri, log expense").
+
+For a comprehensive, step-by-step guide on setting this up, please see the [iOS Shortcut Integration Guide](README-shortcut.md).
